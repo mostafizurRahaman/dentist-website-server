@@ -30,6 +30,19 @@ async function run(){
          const result = await ServiceCollections.insertOne({service, price, image, ratings, description }); 
          res.send(result); 
       })
+
+      //create a get api  for services : 
+      app.get('/services', async(req, res)=>{
+         const size =parseInt(req.query.size); 
+         let services; 
+         if(size){
+             services = await (await ServiceCollections.find({}).limit(size).sort({_id: -1}).toArray()); 
+         }else{
+
+             services = await ServiceCollections.find({}).toArray(); 
+         }
+         res.send(services); 
+      })
    }finally{
 
    }
