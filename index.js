@@ -79,11 +79,28 @@ async function run(){
             res.send(reviews); 
          }
          if(id){
-            console.log("query",id)
             const query = {_id: ObjectId(id)}; 
             const review =await ReviewCollection.findOne(query); 
             res.send(review); 
          }
+
+      // review api for update data of a review : 
+      app.put('/reviews/:id', async(req, res)=>{
+         const id = req.params.id; 
+         const {messageOne, ratingsNew} = req.body; 
+         const query = {_id: ObjectId(id)}; 
+         const  options = {upsert: true}; 
+         const dateField = new Date(); 
+         const updatedReview = {
+             $set: {
+               message: messageOne, 
+               ratings: ratingsNew, 
+               dateField,
+             }
+         }
+         const result = await ReviewCollection.updateOne(query, updatedReview, options); 
+         res.send(result); 
+      })
          
       })
 
