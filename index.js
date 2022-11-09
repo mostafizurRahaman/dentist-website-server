@@ -67,15 +67,27 @@ async function run(){
          res.send(reviews); 
       })
 
+     
       //reviews get api with email address: 
       app.get('/reviews', async(req, res)=>{
          const email = req.query.email; 
-         const query = {email : email}; 
-         const cursor = ReviewCollection.find(query); 
-         const reviews = await cursor.sort({dateField: -1}).toArray(); 
-         res.send(reviews); 
+         const id = req.query.id; 
+         if(email){
+            const query = {email : email}; 
+            const cursor = ReviewCollection.find(query); 
+            const reviews = await cursor.sort({dateField: -1}).toArray(); 
+            res.send(reviews); 
+         }
+         if(id){
+            console.log("query",id)
+            const query = {_id: ObjectId(id)}; 
+            const review =await ReviewCollection.findOne(query); 
+            res.send(review); 
+         }
          
       })
+
+      
 
       //review delete api : 
       app.delete('/reviews/:id', async(req, res)=>{
