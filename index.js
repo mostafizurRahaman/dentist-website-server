@@ -10,20 +10,17 @@ const port = process.env.PORT || 5000;
 app.use(cors()); 
 app.use(express.json()); 
 
-console.log(process.env.DB_USER); 
-console.log(process.env.DB_PASS); 
-console.log(process.env.ACCESS_TOKEN_SECRET); 
 
 // mongo db  code is here: 
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.4nkvsmn.mongodb.net/?retryWrites=true&w=majority`;
-console.log(uri)
+
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
 async function run(){
    try{
       const ServiceCollections = client.db('mr-dentist').collection('services'); 
-
+      const ReviewCollection = client.db('mr-dentist').collection('reviews'); 
       //post services on database : 
       app.post('/services', async(req, res)=>{
          const {service,price, image, ratings, description } = req.body; 
@@ -49,6 +46,15 @@ async function run(){
          const query = {_id: ObjectId(id)}; 
          const service = await ServiceCollections.findOne(query); 
          res.send(service) ; 
+      })
+
+
+      // 
+      app.post('/ratings', async(req, res)=>{
+          const {email , reviewer, profile, ratings, message, service_name, service_id} = req.body; 
+          const dateField = new Date(); 
+          const result = await ReviewCollection.insertOne({message, email, reviewer, service_id, service_name, profile, ratings, dateField}); 
+          res.send(result); 
       })
 
    }finally{
