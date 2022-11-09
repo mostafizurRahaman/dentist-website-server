@@ -49,14 +49,33 @@ async function run(){
       })
 
 
-      // 
-      app.post('/ratings', async(req, res)=>{
+      // review post api :
+      app.post('/reviews', async(req, res)=>{
           const {email , reviewer, profile, ratings, message, service_name, service_id} = req.body; 
           const dateField = new Date(); 
           const result = await ReviewCollection.insertOne({message, email, reviewer, service_id, service_name, profile, ratings, dateField}); 
           res.send(result); 
+         
       })
 
+      // review get api filter with post: 
+      app.get('/reviews/:id', async(req, res)=>{ 
+         const id = req.params.id; 
+         const query = {service_id: id}; 
+         const cursor = ReviewCollection.find(query); 
+         const reviews  = await cursor.sort({dateField: -1}).toArray();
+         res.send(reviews); 
+      })
+
+      //reviews get api with email address: 
+      app.get('/reviews', async(req, res)=>{
+         const email = req.query.email; 
+         const query = {email : email}; 
+         const cursor = ReviewCollection.find(query); 
+         const reviews = await cursor.sort({dateField: -1}).toArray(); 
+         res.send(reviews); 
+         
+      })
    }finally{
 
    }
