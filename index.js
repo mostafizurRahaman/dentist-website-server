@@ -6,6 +6,22 @@ require('dotenv').config();
 const app = express();
 const port = process.env.PORT || 5000; 
 
+
+// custom middleware for jwt : 
+function verifyJWT(req, res, next){
+   const headerInfo = req.headers.authorization; 
+   if(!headerInfo){
+      return res.status(401).send({errorMessage: 'Unauthorized Access'}); 
+   }
+   const token = headerInfo.split(" ")[1]; 
+   jwt.verify(token , process.env.ACCESS_TOKEN_SECRET , function(error, decoded){
+      if(error){
+         return res.status(403).send({errorMessage: "Forbidden Access"}); 
+      }
+       req.decoded = decoded; 
+       next()   
+   })
+}
 // middle wares: 
 app.use(cors()); 
 app.use(express.json()); 
@@ -21,8 +37,16 @@ async function run(){
    try{
       const ServiceCollections = client.db('mr-dentist').collection('services'); 
       const ReviewCollection = client.db('mr-dentist').collection('reviews'); 
+      
+      app.post('/jwt', async(req, res)=>{
+            const user = req.body ; 
+            const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {expiresIn: '1d'}); 
+            console.log(token); 
+            res.send({token}); 
+            
+      })
       //post services on database : 
-      app.post('/services', async(req, res)=>{
+      app.post('/services',verifyJWT, async(req, res)=>{
          const {service,price, image, ratings, description } = req.body; 
          const result = await ServiceCollections.insertOne({service, price, image, ratings, description }); 
          res.send(result); 
@@ -33,7 +57,7 @@ async function run(){
          const size =parseInt(req.query.size); 
          let services; 
          if(size){
-             services = await (await ServiceCollections.find({}).limit(size).sort({_id: -1}).toArray()); 
+             services = await ServiceCollections.find({}).limit(size).sort({_id: -1}).toArray(); 
          }else{
             services = await ServiceCollections.find({}).toArray(); 
          }
@@ -50,15 +74,18 @@ async function run(){
 
 
       // review post api :
-      app.post('/reviews', async(req, res)=>{
+      app.post('/reviews',verifyJWT,  async(req, res)=>{
           const {email , reviewer, profile, ratings, message, service_name, service_id} = req.body; 
+          if(req.decoded.email !== email){
+            return res.status(403).send({errorMessage:"Forbidden Access"});
+          }
           const dateField = new Date(); 
           const result = await ReviewCollection.insertOne({message, email, reviewer, service_id, service_name, profile, ratings, dateField}); 
           res.send(result); 
          
       })
 
-      // review get api filter with post: 
+      // review get api filter with service id: 
       app.get('/reviews/:id', async(req, res)=>{ 
          const id = req.params.id; 
          const query = {service_id: id}; 
@@ -69,23 +96,39 @@ async function run(){
 
      
       //reviews get api with email address: 
-      app.get('/reviews', async(req, res)=>{
-         const email = req.query.email; 
-         const id = req.query.id; 
+      app.get('/reviews',verifyJWT, async(req, res)=>{
+         
+         const email = req.query.email;  
+         if(req.decoded.email !== email){
+            return res.status(401).send({errorMessage: 'Forbidden Access'});
+         }       
+         
          if(email){
             const query = {email : email}; 
             const cursor = ReviewCollection.find(query); 
             const reviews = await cursor.sort({dateField: -1}).toArray(); 
             res.send(reviews); 
          }
-         if(id){
-            const query = {_id: ObjectId(id)}; 
-            const review =await ReviewCollection.findOne(query); 
-            res.send(review); 
-         }
 
+         // const id = req.query.id; 
+         // if(id){
+         //    const query = {_id: ObjectId(id)}; 
+         //    const review =await ReviewCollection.findOne(query); 
+         //    res.send(review); 
+         // }
+         
+      })
+
+
+      app.get("/review/:id",verifyJWT,  async(req, res)=>{
+            const id = req.params.id;
+            const query = {_id: ObjectId(id)}; 
+            const result = await ReviewCollection.findOne(query); 
+            res.send(result);
+         
+      })
       // review api for update data of a review : 
-      app.put('/reviews/:id', async(req, res)=>{
+      app.put('/reviews/:id',verifyJWT,  async(req, res)=>{
          const id = req.params.id; 
          const {messageOne, ratingsNew} = req.body; 
          const query = {_id: ObjectId(id)}; 
@@ -102,12 +145,12 @@ async function run(){
          res.send(result); 
       })
          
-      })
+      
 
       
 
       //review delete api : 
-      app.delete('/reviews/:id', async(req, res)=>{
+      app.delete('/reviews/:id',verifyJWT, async(req, res)=>{
          const id = req.params.id; 
          const query = {_id: ObjectId(id)}; 
          const result = await ReviewCollection.deleteOne(query); 
