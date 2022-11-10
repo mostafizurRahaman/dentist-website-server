@@ -37,6 +37,7 @@ async function run(){
    try{
       const ServiceCollections = client.db('mr-dentist').collection('services'); 
       const ReviewCollection = client.db('mr-dentist').collection('reviews'); 
+      const ContactCollection = client.db('mr-dentist').collection('contacts'); 
       
       app.post('/jwt', async(req, res)=>{
             const user = req.body ; 
@@ -155,6 +156,14 @@ async function run(){
          const query = {_id: ObjectId(id)}; 
          const result = await ReviewCollection.deleteOne(query); 
          res.send(result) ;
+      })
+
+
+      // contact information : 
+      app.post("/contacts",verifyJWT, async(req, res)=>{
+         const {firstName, lastName, email, phone, message} = req.body; 
+         const result = await ContactCollection.insertOne({firstName, lastName, email, phone, message}); 
+         res.send(result); 
       })
    }finally{ 
 
